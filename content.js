@@ -224,39 +224,43 @@ function handleManualScan() {
 
 // Normalization Helper
 function normalizeWord(word) {
-    let lower = word.toLowerCase();
-    // Turkish replacements
-    // ç -> c
-    // ğ -> g
-    // ı -> i
-    // ö -> o
-    // ş -> s
-    // ü -> u
-    // The input might have been uppercase, so toLowerCase handles Ç->ç etc.
-    // But verify special cases like 'İ' -> 'i' (standard toLowerCase handles 'İ' -> 'i' in modern browsers but ensure it)
+    // Handle specific Turkish capitals that might be tricky before generic lowercase
+    // İ -> i
+    // I -> i (Standard English I to i)
+    // There is also 'I' (dotless) in Turkish context, usually treated as 'ı'.
+    // But since our goal is "English chars", both 'I' and 'İ' and 'ı' should map to 'i'.
 
-    return lower
+    let normalized = word;
+
+    // Explicit replace for known Turkish/Non-Ascii upper/lower variants before generic conversion
+    normalized = normalized.replace(/İ/g, 'i');
+    normalized = normalized.replace(/I/g, 'i');
+    normalized = normalized.replace(/ı/g, 'i');
+
+    // Lowercase everything
+    normalized = normalized.toLowerCase();
+
+    // Remaining replacements
+    return normalized
         .replace(/ç/g, 'c')
         .replace(/ğ/g, 'g')
-        .replace(/ı/g, 'i')
         .replace(/ö/g, 'o')
         .replace(/ş/g, 's')
         .replace(/ü/g, 'u');
 }
 
 function scanPage(lengths) {
-    const newWords = getWordsByLengths(lengths);
-    if (newWords.length > 0) {
-        // Merge without duplicates (using normalized versions)
-        newWords.forEach(w => {
-            const normalized = normalizeWord(w);
-            // Check existence against checks AND normalized check
-            // Actually, we store normalized words now?
-            // "Türkçe karakterleri ve diğerlerini ingilizce karakterlere dönüştürelim"
-            // So we should STORE the normalized version.
+    // We get ALL words that match our character set
+    const allWords = getAllWords();
 
-            const exists = collectedWords.includes(normalized);
-            if (!exists) {
+    // Filter by length
+    const relevantWords = allWords.filter(w => lengths.includes(w.length));
+
+    if (relevantWords.length > 0) {
+        // Merge without duplicates (using normalized versions)
+        relevantWords.forEach(w => {
+            const normalized = normalizeWord(w);
+            if (!collectedWords.includes(normalized)) {
                 collectedWords.push(normalized);
             }
         });
@@ -265,8 +269,7 @@ function scanPage(lengths) {
     }
 }
 
-function getWordsByLengths(lengths) {
-    // Reusing existing logic but refined
+function getAllWords() {
     const textNodes = [];
     function getTextNodes(node) {
         if (node.nodeType === 3) {
@@ -283,14 +286,8 @@ function getWordsByLengths(lengths) {
     getTextNodes(document.body);
 
     const wordSet = new Set();
-
-    // Construct a regex that matches any of the selected lengths
-
-    // Use the full Turkish char class for detection
-    const charClass = "[a-zA-ZçğıöşüÇĞİÖŞÜ]";
-    // Create alternatives: [chars]{3}|[chars]{5}
-    const alternatives = lengths.map(len => `${charClass}{${len}}`).join('|');
-    const regex = new RegExp(`\\b(?:${alternatives})\\b`, 'g');
+    // Regex that catches continuous sequences of valid letters (English + Turkish)
+    const regex = /[a-zA-ZçğıöşüÇĞİÖŞÜ]+/g;
 
     textNodes.forEach(node => {
         const text = node.nodeValue;
@@ -298,17 +295,13 @@ function getWordsByLengths(lengths) {
             const matches = text.match(regex);
             if (matches) {
                 matches.forEach(word => {
-                    wordSet.add(word); // Add original found string temporarily
+                    wordSet.add(word);
                 });
             }
         }
     });
 
-    // We return original words here, normalization happens in scanPage
-    // OR we normalize here to return a clean list?
-    // Let's keep this returning raw findings, but maybe de-dupe raw findings first?
-    const foundWords = Array.from(wordSet);
-    return foundWords;
+    return Array.from(wordSet);
 }
 
 // Auto Mode
