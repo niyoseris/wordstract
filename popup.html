@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordstract</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <h1>Wordstract</h1>
+    <div class="input-group">
+        <input type="number" id="wordlength" placeholder="Length" min="1" value="5">
+        <button id="filter-btn">Find Words</button>
+    </div>
+    <div class="input-group">
+        <button id="copy-btn" style="background-color: #28a745; display: none;">Copy All</button>
+    </div>
+    <div id="result-container">
+        <p class="empty-message">Enter a numbered length and click Find Words.</p>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+
+</html>
